@@ -1,0 +1,74 @@
+/* Arquivo destinado a guardar informações sobre o funcionamento das topologias
+   de sistemas NoC para o Garnet */
+
+/* Conceitos iniciais */
+//network
+
+  O atributo network possui 3 atributos que devem ser preenchidos.
+  Isso define a topologia. São eles:
+  -routers
+  -ext_links
+  -int_links
+
+// __init__:
+
+def __init__(self, controllers):
+  self.nodes = controllers
+
+
+/ makeTopology:
+
+def makeTopology(self, options, network, IntLink, ExtLink, Router):
+      "Called from configs/ruby/Ruby.py
+        The return value is ( list(Router), list(IntLink), list(ExtLink))
+        The API of this function cannot change when subclassing!!
+        Any additional information needed to create this topology should
+        be passed into the constructor when it's instantiated in
+        configs/ruby/<protocol>.py"
+
+        # Nodes #
+        /* Os nodes representam o numero controladores*/
+        nodes = self.nodes
+
+        # Latencia (Latency) #
+
+        link_latency = options.link_latency # OBRIGATORIO
+        router_latency = options.router_latency # OBRIGATORIO
+
+        # Roteadores (Routers) #
+
+        /* Create an individual router for each controller */
+        routers = [Router(router_id=i, latency = router_latency) \
+                for i in range(len(nodes))]
+
+        /* Outras topologias podem exigir mais roteadores do que 1 para 1 */
+        ---
+
+        network.routers = routers #OBRIGATORIO
+
+        # Ext Links #
+        /* External Links ? */
+        ExtLink(link_id, ext_node, int_node, latency)
+
+        /* P2P */
+        ext_links = [ExtLink(link_id=i, ext_node=n, int_node=routers[i],
+                         latency = link_latency)
+                        for (i, n) in enumerate(nodes)]
+        network.ext_links = ext_links
+
+        # Int Links #
+        /* Internal LInks ? */
+
+        /* P2P */
+        link_count = len(nodes)
+        int_links = []
+            for i in xrange(len(nodes)):
+                for j in xrange(len(nodes)):
+                    if (i != j):
+                        link_count += 1
+                        int_links.append(IntLink(link_id=link_count,
+                                                 src_node=routers[i],
+                                                 dst_node=routers[j],
+                                                 latency = link_latency))
+
+            network.int_links = int_links
