@@ -18,7 +18,7 @@ class BenesDirCorners_XY(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        # 1-ary (parametrizar?)
+        # 1-ary
         cpu_per_router = 1
 
         num_routers = int((options.num_cpus * (log(options.num_cpus,2) + 1)) / cpu_per_router)
