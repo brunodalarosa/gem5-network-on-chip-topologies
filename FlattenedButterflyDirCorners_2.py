@@ -40,8 +40,8 @@ from BaseTopology import SimpleTopology
 # Cria uma topologia Flattened Butterfly usando roteadores high radix
 # com 4 diretórios, um em cada canto da topologia.
 
-class FlattenedButterflyDirCorners(SimpleTopology):
-    description='FlattenedButterflyDirCorners'
+class FlattenedButterflyDirCorners_2(SimpleTopology):
+    description='FlattenedButterflyDirCorners_2'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -50,7 +50,7 @@ class FlattenedButterflyDirCorners(SimpleTopology):
         nodes = self.nodes
 
         # Radix dos roteadores (parametrizar?)
-        cpu_per_router = 2
+        cpu_per_router = 4
 
         num_routers = options.num_cpus / cpu_per_router
         num_rows = 4

@@ -37,11 +37,10 @@ from m5.objects import *
 
 from BaseTopology import SimpleTopology
 
-# Cria uma topologia Flattened Butterfly usando roteadores high radix
-# com 4 diretórios, um em cada canto da topologia.
+# Cria uma topologia Torus com 4 diretórios, um em cada canto da topologia.
 
-class FlattenedButterflyDirCorners(SimpleTopology):
-    description='FlattenedButterflyDirCorners'
+class TorusDirCorners_2(SimpleTopology):
+    description='TorusDirCorners_2'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -49,14 +48,9 @@ class FlattenedButterflyDirCorners(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        # Radix dos roteadores (parametrizar?)
-        cpu_per_router = 2
-
+        cpu_per_router = 2 # 2-ary
         num_routers = options.num_cpus / cpu_per_router
-        num_rows = 4
-
-        if(options.num_cpus < 16):
-            num_rows = 2
+        num_rows = 4 / cpu_per_router
 
         ## Define as latencias associadas.
         # default values for link latency and router latency.
@@ -83,11 +77,11 @@ class FlattenedButterflyDirCorners(SimpleTopology):
         assert(num_rows > 0 and num_rows <= num_routers)
         num_columns = int(num_routers / num_rows)
         assert(num_columns * num_rows == num_routers)
-        caches_per_router, remainder = divmod(len(cache_nodes), num_routers)
+        caches_per_router, remainder = divmod(len(cache_nodes), num_routers/ cpu_per_router)
         assert(remainder == 0)
         assert(len(dir_nodes) == 4)
 
-        # Cria os roteadores (Indirect type = 4 node para 1 roteador)
+        # Cria os roteadores (Direct type = 1 roteador para 1 node)
         routers = [Router(router_id=i, latency = router_latency) \
             for i in range(num_routers)]
         network.routers = routers
@@ -95,9 +89,9 @@ class FlattenedButterflyDirCorners(SimpleTopology):
         # Contador de ID's para gerar ID's únicos das ligações.
         link_count = 0
 
-        # Conecta cada nodo ao seu roteador apropriado
+        # Conecta cada controlador de cache ao seu roteador apropriado
         ext_links = []
-        print("Conectando os nodes aos roteadores\n")
+
         for (i, n) in enumerate(cache_nodes):
             cntrl_level, router_id = divmod(i, num_routers)
             assert(cntrl_level < caches_per_router)
@@ -114,7 +108,7 @@ class FlattenedButterflyDirCorners(SimpleTopology):
                                 latency = link_latency))
         link_count += 1
 
-        print("Diretorio 2 ligado ao roteador " + str(num_columns - 1))
+        print("Diretorio 2 ligado ao roteador " + str(num_columns -1))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[1],
                                 int_node=routers[num_columns - 1],
                                 latency = link_latency))
@@ -141,84 +135,134 @@ class FlattenedButterflyDirCorners(SimpleTopology):
 
         network.ext_links = ext_links
 
-        # Cria as conexões entre os roteadores em Flattened Butterfly
-        print("\nConectando os roteadores entre eles")
+        # Cria as conexões em Torus
         int_links = []
 
+        # Conecta da esquerda (source) para a direita (destination)
         # East output to West input links (weight = 1)
         print("\nEast to West\n")
         for row in xrange(num_rows):
             for col in xrange(num_columns):
                 if (col + 1 < num_columns):
                     east_out = col + (row * num_columns)
-                    for col2 in xrange(col,num_columns-1):
-                        west_in = (col2 + 1) + (row * num_columns)
-                        print("Ligou o " +  str(east_out) + " no " +  str(west_in))
-                        int_links.append(IntLink(link_id=link_count,
+                    west_in = (col + 1) + (row * num_columns)
+                    print("Ligou o " +  str(east_out) + " no " +  str(west_in))
+                    int_links.append(IntLink(link_id=link_count,
                                              src_node=routers[east_out],
                                              dst_node=routers[west_in],
                                              src_outport="East",
                                              dst_inport="West",
                                              latency = link_latency,
                                              weight=1))
-                        link_count += 1
+                    link_count += 1
+
+                else: # O ultimo com o primeiro
+                    east_out = col + (row * num_columns)
+                    west_in = row * num_columns
+                    print("[X] Ligou o " +  str(east_out) + " no " +  str(west_in))
+                    int_links.append(IntLink(link_id=link_count,
+                                             src_node=routers[east_out],
+                                             dst_node=routers[west_in],
+                                             src_outport="East",
+                                             dst_inport="West",
+                                             latency = link_latency,
+                                             weight=1))
+                    link_count += 1
             print("---")
 
+
+
+        # Conecta da direita(source) para esquerda (destination)
         # West output to East input links (weight = 1)
         print("\nWest to East\n")
         for row in xrange(num_rows):
             for col in xrange(num_columns):
-                if (col + 1 < num_columns):
-                    east_in = col + (row * num_columns)
-                    for col2 in xrange(col, num_columns - 1):
-                        west_out = (col2 + 1) + (row * num_columns)
-                        print("Ligou o " +  str(east_in) + " no " +  str(west_out))
-                        int_links.append(IntLink(link_id=link_count,
+                if (col == 0 ): # O primeiro com o ultimo
+                    east_in = (num_columns - 1) + (row * num_columns)
+                    west_out = col + (row * num_columns)
+                    print("[X] Ligou o " +  str(east_in) + " no " +  str(west_out))
+                    int_links.append(IntLink(link_id=link_count,
                                              src_node=routers[west_out],
                                              dst_node=routers[east_in],
                                              src_outport="West",
                                              dst_inport="East",
                                              latency = link_latency,
                                              weight=1))
-                        link_count += 1
+                    link_count += 1
+
+                if (col + 1 < num_columns):
+                    east_in = col + (row * num_columns)
+                    west_out = (col + 1) + (row * num_columns)
+                    print("Ligou o " +  str(east_in) + " no " +  str(west_out))
+                    int_links.append(IntLink(link_id=link_count,
+                                             src_node=routers[west_out],
+                                             dst_node=routers[east_in],
+                                             src_outport="West",
+                                             dst_inport="East",
+                                             latency = link_latency,
+                                             weight=1))
+                    link_count += 1
             print("---")
 
+        print("\nNorth to south\n")
         # North output to South input links (weight = 2)
-        print("\nNorth to South\n")
         for col in xrange(num_columns):
             for row in xrange(num_rows):
                 if (row + 1 < num_rows):
                     north_out = col + (row * num_columns)
-                    for row2 in xrange(row, num_rows - 1):
-                        south_in = col + ((row2 + 1) * num_columns)
-                        print("Ligou o " +  str(north_out) + " no " +  str(south_in))
-                        int_links.append(IntLink(link_id=link_count,
+                    south_in = col + ((row + 1) * num_columns)
+                    print("Ligou o " +  str(north_out) + " no " +  str(south_in))
+                    int_links.append(IntLink(link_id=link_count,
                                              src_node=routers[north_out],
                                              dst_node=routers[south_in],
                                              src_outport="North",
                                              dst_inport="South",
                                              latency = link_latency,
                                              weight=2))
-                        link_count += 1
+                    link_count += 1
+                else: # O ultimo com o primeiro
+                    north_out = col + (row * num_columns)
+                    south_in = col
+                    print("[X] Ligou o " +  str(north_out) + " no " +  str(south_in))
+                    int_links.append(IntLink(link_id=link_count,
+                                             src_node=routers[north_out],
+                                             dst_node=routers[south_in],
+                                             src_outport="North",
+                                             dst_inport="South",
+                                             latency = link_latency,
+                                             weight=2))
+                    link_count += 1
             print("---")
 
-        # South output to North input links (weight = 2)
+        # South output to North input links (weight = 2
         print("\nSouth to North\n")
         for col in xrange(num_columns):
             for row in xrange(num_rows):
-                if (row + 1 < num_rows):
-                    north_in = col + (row * num_columns)
-                    for row2 in xrange(row, num_rows - 1):
-                        south_out = col + ((row2 + 1) * num_columns)
-                        print("Ligou o " +  str(north_in) + " no " +  str(south_out))
-                        int_links.append(IntLink(link_id=link_count,
+                if (row == 0): # O primeiro com o ultimo
+                    north_in = col + (num_columns * (num_rows -1))
+                    south_out = col
+                    print("[X] Ligou o " +  str(north_in) + " no " +  str(south_out))
+                    int_links.append(IntLink(link_id=link_count,
                                              src_node=routers[south_out],
                                              dst_node=routers[north_in],
                                              src_outport="South",
                                              dst_inport="North",
                                              latency = link_latency,
                                              weight=2))
-                        link_count += 1
+                    link_count += 1
+
+                if (row + 1 < num_rows):
+                    north_in = col + (row * num_columns)
+                    south_out = col + ((row + 1) * num_columns)
+                    print("Ligou o " +  str(north_in) + " no " +  str(south_out))
+                    int_links.append(IntLink(link_id=link_count,
+                                             src_node=routers[south_out],
+                                             dst_node=routers[north_in],
+                                             src_outport="South",
+                                             dst_inport="North",
+                                             latency = link_latency,
+                                             weight=2))
+                    link_count += 1
             print("---")
 
         network.int_links = int_links

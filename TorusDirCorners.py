@@ -1,4 +1,34 @@
 # -*- coding: utf-8 -*-
+# # Copyright (c) 2010 Advanced Micro Devices, Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met: redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer;
+# redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution;
+# neither the name of the copyright holders nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Authors: Brad Beckmann
+#
+# ^ ORIGINAL COPYRIGHT OF MESH TOPOLOGY WHICH WAS USED AS BASE TO THIS ^
+#
 # 2018
 # Author: Bruno Cesar Puli Dala Rosa, bcesar.g6@gmail.com
 
@@ -9,8 +39,8 @@ from BaseTopology import SimpleTopology
 
 # Cria uma topologia Torus com 4 diretórios, um em cada canto da topologia.
 
-class TorusDirCorners_XY(SimpleTopology):
-    description='TorusDirCorners_XY'
+class TorusDirCorners(SimpleTopology):
+    description='TorusDirCorners'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -18,8 +48,9 @@ class TorusDirCorners_XY(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        num_routers = options.num_cpus
-        num_rows = options.mesh_rows
+        cpu_per_router = 1
+        num_routers = options.num_cpus / cpu_per_router
+        num_rows = 4 / cpu_per_router
 
         ## Define as latencias associadas.
         # default values for link latency and router latency.
@@ -60,27 +91,36 @@ class TorusDirCorners_XY(SimpleTopology):
 
         # Conecta cada controlador de cache ao seu roteador apropriado
         ext_links = []
+
         for (i, n) in enumerate(cache_nodes):
             cntrl_level, router_id = divmod(i, num_routers)
             assert(cntrl_level < caches_per_router)
+            print("Conectado o node " + str(n) + " ao roteador " + str(router_id) + "\n")
             ext_links.append(ExtLink(link_id=link_count, ext_node=n,
                                     int_node=routers[router_id],
                                     latency = link_latency))
             link_count += 1
 
         # Conecta os diretórios aos 4 cantos
+        print("Diretorio 1 ligado ao roteador " + str(0))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[0],
                                 int_node=routers[0],
                                 latency = link_latency))
         link_count += 1
+
+        print("Diretorio 2 ligado ao roteador " + str(num_columns -1))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[1],
                                 int_node=routers[num_columns - 1],
                                 latency = link_latency))
         link_count += 1
+
+        print("Diretorio 3 ligado ao roteador " + str(num_routers - num_columns))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[2],
                                 int_node=routers[num_routers - num_columns],
                                 latency = link_latency))
         link_count += 1
+
+        print("Diretorio 4 ligado ao roteador " + str(num_routers - 1))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[3],
                                 int_node=routers[num_routers - 1],
                                 latency = link_latency))
