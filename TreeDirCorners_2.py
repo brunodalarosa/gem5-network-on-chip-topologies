@@ -38,9 +38,9 @@ from math import *
 
 from BaseTopology import SimpleTopology
 
-# Cria uma topologia Clos com 4 diretórios, um em cada canto da topologia.
-class ClosDirCorners_2(SimpleTopology):
-    description='ClosDirCorners_2'
+# Cria uma topologia Tree com 4 diretórios, um em cada canto da topologia.
+class TreeDirCorners_2(SimpleTopology):
+    description='TreeDirCorners_2'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -48,11 +48,20 @@ class ClosDirCorners_2(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        num_rows = 4 #Parametro r
-        num_columns = 5 #Parametro m
-        cpu_per_router = options.num_cpus / (num_rows * 2)
-        num_routers = num_rows * 2 + num_columns
-        print("3-Stage Clos. Number of routers = " + str(num_routers))
+        # 4-ary
+        cpu_per_router = 4
+
+        height = int(ceil (log ( (options.num_cpus / ( cpu_per_router / 2) ), 2)))
+        print("Tree height = " + str(height))
+
+        num_routers = 0
+
+        for i in xrange(height):
+            num_routers += 2**i
+
+        print("Tree number of routers = " + str(num_routers))
+
+        num_rows = height
 
         ## Define as latencias associadas.
         # default values for link latency and router latency.
@@ -73,7 +82,12 @@ class ClosDirCorners_2(SimpleTopology):
             elif node.type == 'DMA_Controller':
                 dma_nodes.append(node)
 
-        # Cria os roteadores (Indirect type)
+        # O número de linhas deve ser <= ao número de roteadores e divisivel por ele.
+        # O número de diretórios deve ser igual a 4.
+        assert(num_rows > 0 and num_rows <= num_routers)
+        assert(len(dir_nodes) == 4)
+
+        # Cria os roteadores
         routers = [Router(router_id=i, latency = router_latency) \
             for i in range(num_routers)]
         network.routers = routers
@@ -84,51 +98,38 @@ class ClosDirCorners_2(SimpleTopology):
         # Conecta cada nodo ao seu roteador apropriado
         ext_links = []
         print("Conectando os nodes aos roteadores\n")
-
-        for i in xrange(num_rows):
-            for j in xrange(cpu_per_router):
-                node = cache_nodes[i * cpu_per_router + j]
-                print("Conectado o node " + str(node) + " ao roteador " + str(i) + "\n")
-                ext_links.append(ExtLink(link_id=link_count, ext_node=node,
-                                        int_node=routers[i],
-                                        latency = link_latency))
-                link_count += 1
-
-        for i in xrange(num_rows + num_columns, num_routers):
-            for j in xrange(cpu_per_router):
-                node = cache_nodes[(options.num_cpus/2) + (i - num_rows - num_columns) * cpu_per_router + j]
-                print("Conectado o node " + str(node) + " ao roteador " + str(i) + "\n")
-                ext_links.append(ExtLink(link_id=link_count, ext_node=node,
-                                        int_node=routers[i],
-                                        latency = link_latency))
-                link_count += 1
-
+        for (i, n) in enumerate(cache_nodes):
+            cntrl_level, router_id = divmod(i, options.num_cpus / cpu_per_router)
+            print("Conectado o node " + str(n) + " ao roteador " + str((num_routers - router_id) - 1) + "\n")
+            ext_links.append(ExtLink(link_id=link_count, ext_node=n,
+                                    int_node=routers[(num_routers - router_id) - 1],
+                                    latency = link_latency))
+            link_count += 1
 
         # Conecta os diretórios aos 4 "cantos" : 1 no inicio, 1 no fim, 2 no centro.
-        print("Diretorio 1 ligado ao roteador 0")
+        print("Diretorio 1 ligado ao roteador " + str(num_routers - (options.num_cpus / cpu_per_router)))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[0],
-                                int_node=routers[0],
+                                int_node=routers[num_routers - (options.num_cpus / cpu_per_router)],
                                 latency = link_latency))
         link_count += 1
 
-        print("Diretorio 2 ligado ao roteador " + str(num_rows - 1))
+        print("Diretorio 2 ligado ao roteador " + str((num_routers - 2**(height-2)) - 1))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[1],
-                                int_node=routers[num_rows - 1],
+                                int_node=routers[(num_routers - 2**(height-2)) - 1],
                                 latency = link_latency))
         link_count += 1
 
-        print("Diretorio 3 ligado ao roteador " + str(num_rows + num_columns))
+        print("Diretorio 3 ligado ao roteador " + str(num_routers - 2**(height-2)))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[2],
-                                int_node=routers[num_rows + num_columns],
+                                int_node=routers[(num_routers - 2**(height-2))],
                                 latency = link_latency))
         link_count += 1
 
-        print("Diretorio 4 ligado ao roteador " + str(num_routers-1))
+        print("Diretorio 4 ligado ao roteador " + str(num_routers - 1))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[3],
-                                int_node=routers[num_routers-1],
+                                int_node=routers[num_routers - 1],
                                 latency = link_latency))
         link_count += 1
-
 
         # Conecta os nodos de DMA ao roteador 0. These should only be DMA nodes.
         for (i, node) in enumerate(dma_nodes):
@@ -139,69 +140,57 @@ class ClosDirCorners_2(SimpleTopology):
 
         network.ext_links = ext_links
 
-        # Cria as conexões entre os roteadores em Flattened Butterfly
+        # Cria as conexões entre os roteadores em Butterfly
         print("\nConectando os roteadores entre eles")
         int_links = []
+        _out = 0
 
-        # East output to West input links (weight = 1)
-        print("\nEsquerda\n")
-        for row in xrange(num_rows):
-            for col in xrange(num_rows, num_rows + num_columns):
-                _out = row
-                _in = col
+        for i in xrange(height-1):
+            for j in xrange(2**i):
+
+                _in = _out * 2 + 1
+
                 print("Ligou o " +  str(_out) + " no " +  str(_in))
                 int_links.append(IntLink(link_id=link_count,
                                          src_node=routers[_out],
                                          dst_node=routers[_in],
-                                         src_outport="East",
-                                         dst_inport="West",
+                                         src_outport="South",
+                                         dst_inport="North",
                                          latency = link_latency,
                                          weight=1))
                 link_count += 1
 
-                _out = col
-                _in = row
+                print("Ligou o " +  str(_in) + " no " +  str(_out))
+                int_links.append(IntLink(link_id=link_count,
+                                         src_node=routers[_in],
+                                         dst_node=routers[_out],
+                                         src_outport="North",
+                                         dst_inport="South",
+                                         latency = link_latency,
+                                         weight=1))
+                link_count += 1
+
+                _in = _out * 2 + 2
+
                 print("Ligou o " +  str(_out) + " no " +  str(_in))
                 int_links.append(IntLink(link_id=link_count,
                                          src_node=routers[_out],
                                          dst_node=routers[_in],
-                                         src_outport="West",
-                                         dst_inport="East",
+                                         src_outport="South",
+                                         dst_inport="North",
                                          latency = link_latency,
                                          weight=1))
                 link_count += 1
 
-
-            print("---")
-
-        # East output to West input links (weight = 1)
-        print("\nDireita\n")
-        for row in xrange(num_rows, num_rows + num_columns):
-            for col in xrange(num_rows + num_columns, num_routers):
-                _out = row
-                _in = col
-                print("Ligou o " +  str(_out) + " no " +  str(_in))
+                print("Ligou o " +  str(_in) + " no " +  str(_out))
                 int_links.append(IntLink(link_id=link_count,
-                                         src_node=routers[_out],
-                                         dst_node=routers[_in],
-                                         src_outport="East",
-                                         dst_inport="West",
+                                         src_node=routers[_in],
+                                         dst_node=routers[_out],
+                                         src_outport="North",
+                                         dst_inport="South",
                                          latency = link_latency,
                                          weight=1))
                 link_count += 1
+                _out += 1
 
-                _out = col
-                _in = row
-                print("Ligou o " +  str(_out) + " no " +  str(_in))
-                int_links.append(IntLink(link_id=link_count,
-                                         src_node=routers[_out],
-                                         dst_node=routers[_in],
-                                         src_outport="West",
-                                         dst_inport="East",
-                                         latency = link_latency,
-                                         weight=1))
-                link_count += 1
-
-
-            print("---")
         network.int_links = int_links

@@ -48,8 +48,8 @@ class ClosDirCorners_2(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        num_rows = 4 #Parametro r
-        num_columns = 5 #Parametro m
+        num_rows = 2 #Parametro r
+        num_columns = 3 #Parametro m
         cpu_per_router = options.num_cpus / (num_rows * 2)
         num_routers = num_rows * 2 + num_columns
         print("3-Stage Clos. Number of routers = " + str(num_routers))

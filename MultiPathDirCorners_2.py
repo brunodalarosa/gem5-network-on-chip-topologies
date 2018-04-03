@@ -39,8 +39,8 @@ from math import *
 from BaseTopology import SimpleTopology
 
 # Cria uma topologia MultiPath com 4 diretórios, um em cada canto da topologia.
-class MultiPathDirCorners(SimpleTopology):
-    description='MultiPathDirCorners'
+class MultiPathDirCorners_2(SimpleTopology):
+    description='MultiPathDirCorners_2'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -48,8 +48,11 @@ class MultiPathDirCorners(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        # 2-ary
-        cpu_per_router = 2
+        # 4-ary
+        cpu_per_router = 4
+
+        if(options.num_cpus < 16):
+            cpu_per_router = 2
 
         num_clusters = options.num_cpus / ( 4 * cpu_per_router )
         num_routers = num_clusters * 6

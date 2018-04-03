@@ -22,7 +22,7 @@ while getopts "t:n:" opt; do
   esac
 done
 
-./../../build/Garnet_standalone/gem5.opt ./../../configs/example/garnet_synth_traffic.py --network=garnet2.0 --num-cpus=$NUM_CPUS --num-dirs=4 --topology=$TOPOLOGY --mesh-rows=4 --sim-cycles=50000 --inj-vnet=0 --injectionrate=0.02 --synthetic=uniform_random --link-width-bits=32
+./../../build/Garnet_standalone/gem5.opt ./../../configs/example/garnet_synth_traffic.py --network=garnet2.0 --num-cpus=$NUM_CPUS --num-dirs=4 --topology=$TOPOLOGY --sim-cycles=50000 --inj-vnet=0 --injectionrate=0.02 --synthetic=uniform_random --link-width-bits=32
 
-mv m5out/ $OUT_DIR/$TOPOLOGY
+mv m5out/ $OUT_DIR/$TOPOLOGY.$NUM_CPUS
 echo "fim"

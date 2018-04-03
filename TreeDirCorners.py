@@ -1,4 +1,34 @@
 # -*- coding: utf-8 -*-
+# # Copyright (c) 2010 Advanced Micro Devices, Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met: redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer;
+# redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution;
+# neither the name of the copyright holders nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Authors: Brad Beckmann
+#
+# ^ ORIGINAL COPYRIGHT OF MESH TOPOLOGY WHICH WAS USED AS BASE TO THIS ^
+#
 # 2018
 # Author: Bruno Cesar Puli Dala Rosa, bcesar.g6@gmail.com
 
@@ -9,8 +39,8 @@ from math import *
 from BaseTopology import SimpleTopology
 
 # Cria uma topologia Tree com 4 diretórios, um em cada canto da topologia.
-class TreeDirCorners_XY(SimpleTopology):
-    description='TreeDirCorners_XY'
+class TreeDirCorners(SimpleTopology):
+    description='TreeDirCorners'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -18,10 +48,10 @@ class TreeDirCorners_XY(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        # (parametrizar?)
+        # 2-ary
         cpu_per_router = 2
 
-        height = int(log(options.num_cpus, cpu_per_router))
+        height = int(ceil (log ( (options.num_cpus / ( cpu_per_router / 2) ), 2)))
         print("Tree height = " + str(height))
 
         num_routers = 0
@@ -69,7 +99,7 @@ class TreeDirCorners_XY(SimpleTopology):
         ext_links = []
         print("Conectando os nodes aos roteadores\n")
         for (i, n) in enumerate(cache_nodes):
-            cntrl_level, router_id = divmod(i, options.num_cpus / 2)
+            cntrl_level, router_id = divmod(i, options.num_cpus / cpu_per_router)
             print("Conectado o node " + str(n) + " ao roteador " + str((num_routers - router_id) - 1) + "\n")
             ext_links.append(ExtLink(link_id=link_count, ext_node=n,
                                     int_node=routers[(num_routers - router_id) - 1],
@@ -77,9 +107,9 @@ class TreeDirCorners_XY(SimpleTopology):
             link_count += 1
 
         # Conecta os diretórios aos 4 "cantos" : 1 no inicio, 1 no fim, 2 no centro.
-        print("Diretorio 1 ligado ao roteador " + str(num_routers - (options.num_cpus / 2)))
+        print("Diretorio 1 ligado ao roteador " + str(num_routers - (options.num_cpus / cpu_per_router)))
         ext_links.append(ExtLink(link_id=link_count, ext_node=dir_nodes[0],
-                                int_node=routers[num_routers - (options.num_cpus / 2)],
+                                int_node=routers[num_routers - (options.num_cpus / cpu_per_router)],
                                 latency = link_latency))
         link_count += 1
 
