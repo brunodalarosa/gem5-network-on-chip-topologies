@@ -50,7 +50,7 @@ class TorusDirCorners_2(SimpleTopology):
 
         cpu_per_router = 2 # 2-ary
         num_routers = options.num_cpus / cpu_per_router
-        num_rows = 4 / cpu_per_router
+        num_rows = num_routers / 4
 
         ## Define as latencias associadas.
         # default values for link latency and router latency.

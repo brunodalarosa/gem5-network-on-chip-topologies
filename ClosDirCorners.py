@@ -39,8 +39,8 @@ from math import *
 from BaseTopology import SimpleTopology
 
 # Cria uma topologia Clos com 4 diretórios, um em cada canto da topologia.
-class ClosDirCorners_2(SimpleTopology):
-    description='ClosDirCorners_2'
+class ClosDirCorners(SimpleTopology):
+    description='ClosDirCorners'
 
     def __init__(self, controllers):
         self.nodes = controllers

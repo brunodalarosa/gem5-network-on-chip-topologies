@@ -35,8 +35,8 @@ from BaseTopology import SimpleTopology
 # One L1 (and L2, depending on the protocol) are connected to each router.
 # XY routing is enforced (using link weights) to guarantee deadlock freedom.
 
-class MeshDirCorners_XY(SimpleTopology):
-    description='MeshDirCorners_XY'
+class MeshDirCorners(SimpleTopology):
+    description='MeshDirCorners'
 
     def __init__(self, controllers):
         self.nodes = controllers
@@ -44,8 +44,9 @@ class MeshDirCorners_XY(SimpleTopology):
     def makeTopology(self, options, network, IntLink, ExtLink, Router):
         nodes = self.nodes
 
-        num_routers = options.num_cpus
-        num_rows = options.mesh_rows
+        cpu_per_router = 1
+        num_routers = options.num_cpus / cpu_per_router
+        num_rows = num_routers / 4
 
         # default values for link latency and router latency.
         # Can be over-ridden on a per link/router basis

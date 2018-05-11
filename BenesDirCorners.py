@@ -39,8 +39,8 @@ from math import *
 from BaseTopology import SimpleTopology
 
 # Cria uma topologia Benes com 4 diretórios, um em cada canto da topologia.
-class BenesDirCorners_XY(SimpleTopology):
-    description='BenesDirCorners_XY'
+class BenesDirCorners(SimpleTopology):
+    description='BenesDirCorners\'
 
     def __init__(self, controllers):
         self.nodes = controllers
